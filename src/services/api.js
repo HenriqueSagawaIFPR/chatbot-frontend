@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Configuração do cliente axios para o backend
 const api = axios.create({
-  baseURL: 'http://localhost:3000', // URL do servidor Node.js
+  baseURL: 'https://chatbot-backend-lz8l.onrender.com', // URL do servidor Node.js
   headers: {
     'Content-Type': 'application/json',
   },
