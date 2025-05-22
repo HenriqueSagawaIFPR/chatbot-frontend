@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
+import ReactMarkdown from 'react-markdown';
 import { sendMessage } from '../services/api';
 import ErrorMessage from './ErrorMessage';
 
@@ -49,6 +50,39 @@ const MessageBubble = styled.div`
   
   &:first-child {
     margin-top: auto;
+  }
+
+  /* Estilos para elementos markdown */
+  p {
+    margin: 0;
+  }
+
+  code {
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-family: monospace;
+  }
+
+  pre {
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 1em;
+    border-radius: 5px;
+    overflow-x: auto;
+    margin: 0.5em 0;
+  }
+
+  ul, ol {
+    margin: 0.5em 0;
+    padding-left: 1.5em;
+  }
+
+  blockquote {
+    border-left: 3px solid ${props => props.theme.colors.accent};
+    margin: 0.5em 0;
+    padding-left: 1em;
+    color: ${props => props.theme.colors.lightText};
+    opacity: 0.8;
   }
 `;
 
@@ -227,7 +261,11 @@ const ChatBot = () => {
               key={message.id} 
               isUser={message.isUser}
             >
-              {message.text}
+              {message.isUser ? (
+                message.text
+              ) : (
+                <ReactMarkdown>{message.text}</ReactMarkdown>
+              )}
             </MessageBubble>
           )
         ))}
