@@ -4,7 +4,7 @@ import axios from 'axios';
 // Certifique-se de que esta URL esteja correta e acessível pelo frontend
 // Em desenvolvimento, pode ser algo como 'http://localhost:3000/api'
 // Em produção, será a URL do seu servidor backend implantado
-const API_BASE_URL = 'https://chatbot-backend-lz8l.onrender.com/api'; 
+const API_BASE_URL = 'http://localhost:3000/api'; 
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
