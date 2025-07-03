@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import ReactMarkdown from 'react-markdown';
-import { sendMessage } from '../services/api';
+import { sendMessage, registrarLogAcesso, registrarAcessoBotRanking, getUserInfo } from '../services/api';
 import ErrorMessage from './ErrorMessage';
 
 const ChatContainer = styled.div`
@@ -178,6 +178,7 @@ const ChatBot = () => {
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [userInfo, setUserInfo] = useState(null);
   const messagesEndRef = useRef(null);
 
   // Função para rolar para a mensagem mais recente
@@ -189,6 +190,32 @@ const ChatBot = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Efeito para inicializar logs de acesso quando o componente é montado
+  useEffect(() => {
+    const inicializarLogs = async () => {
+      try {
+        // Obter informações do usuário
+        const info = await getUserInfo();
+        setUserInfo(info);
+
+        // Registrar acesso inicial ao chatbot
+        await registrarLogAcesso(info.ip, 'acesso_inicial_chatbot');
+        
+        // Registrar acesso para o sistema de ranking
+        await registrarAcessoBotRanking(
+          'vagner-terraplanista', 
+          'Vagner Terraplanista'
+        );
+
+        console.log('Logs de acesso inicializados com sucesso');
+      } catch (error) {
+        console.error('Erro ao inicializar logs de acesso:', error);
+      }
+    };
+
+    inicializarLogs();
+  }, []);
 
   // Função para enviar mensagem
   const handleSendMessage = async () => {
@@ -206,6 +233,11 @@ const ChatBot = () => {
     setIsLoading(true);
     
     try {
+      // Registrar log de envio de mensagem
+      if (userInfo) {
+        await registrarLogAcesso(userInfo.ip, 'enviou_mensagem_chatbot');
+      }
+
       // Prepara o histórico de mensagens no formato esperado pelo backend
       const messageHistory = messages.map(msg => ({
         role: msg.isUser ? 'user' : 'assistant',
@@ -223,8 +255,18 @@ const ChatBot = () => {
       };
       
       setMessages(prev => [...prev, botResponse]);
+
+      // Registrar log de resposta recebida
+      if (userInfo) {
+        await registrarLogAcesso(userInfo.ip, 'recebeu_resposta_chatbot');
+      }
     } catch (error) {
       console.error('Erro ao processar mensagem:', error);
+      
+      // Registrar log de erro
+      if (userInfo) {
+        await registrarLogAcesso(userInfo.ip, 'erro_processamento_mensagem');
+      }
       
       // Adiciona mensagem de erro como componente ErrorMessage
       const errorMessage = {
