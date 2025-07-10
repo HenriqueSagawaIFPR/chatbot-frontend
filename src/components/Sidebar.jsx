@@ -1,15 +1,36 @@
 import React from 'react';
 import styled from 'styled-components';
+import BotInfo from './BotInfo';
 
 const SidebarContainer = styled.aside`
-  width: 280px;
+  width: 320px;
   height: 100vh;
   background-color: ${props => props.theme.colors.primary};
   color: ${props => props.theme.colors.text};
-  padding: 1.5rem;
   display: flex;
   flex-direction: column;
   border-right: 1px solid rgba(0, 0, 0, 0.1);
+  overflow-y: auto;
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: ${props => props.theme.colors.lightText};
+    border-radius: 3px;
+  }
+`;
+
+const SidebarContent = styled.div`
+  padding: 1.5rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 `;
 
 const SidebarHeader = styled.div`
@@ -104,24 +125,26 @@ const Divider = styled.div`
 const Sidebar = ({ chats, onSelectChat, onNewChat, activeChatId }) => {
   return (
     <SidebarContainer>
-      <SidebarHeader>Conversas</SidebarHeader>
-      <NewChatButton onClick={onNewChat}>+ Nova Conversa</NewChatButton>
-      <Divider />
-      <ChatList>
-        {chats && chats.length === 0 && (
-          <li style={{ color: '#bbb', padding: '1rem 0', fontSize: '0.95rem' }}>Nenhuma conversa encontrada.</li>
-        )}
-        {chats && chats.map(chat => (
-          <ChatListItem 
-            key={chat._id} 
-            onClick={() => onSelectChat(chat._id)}
-            className={chat._id === activeChatId ? 'active' : ''}
-          >
-            {chat.title}
-          </ChatListItem>
-        ))}
-      </ChatList>
-      {/* Adicionar botão de colapsar/expandir depois */}
+      <BotInfo />
+      <SidebarContent>
+        <SidebarHeader>Conversas</SidebarHeader>
+        <NewChatButton onClick={onNewChat}>+ Nova Conversa</NewChatButton>
+        <Divider />
+        <ChatList>
+          {chats && chats.length === 0 && (
+            <li style={{ color: '#bbb', padding: '1rem 0', fontSize: '0.95rem' }}>Nenhuma conversa encontrada.</li>
+          )}
+          {chats && chats.map(chat => (
+            <ChatListItem 
+              key={chat._id} 
+              onClick={() => onSelectChat(chat._id)}
+              className={chat._id === activeChatId ? 'active' : ''}
+            >
+              {chat.title}
+            </ChatListItem>
+          ))}
+        </ChatList>
+      </SidebarContent>
     </SidebarContainer>
   );
 };

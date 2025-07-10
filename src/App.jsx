@@ -4,6 +4,7 @@ import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import LoadingIndicator from './components/LoadingIndicator';
 import ErrorMessage from './components/ErrorMessage';
+import ResponsiveLayout from './components/ResponsiveLayout';
 import { getChats, getChatById, sendMessage } from './services/api'; 
 import { GlobalStyles } from './styles/GlobalStyles';
 
@@ -11,14 +12,15 @@ const theme = {
   colors: {
     primary: '#ffffff',
     secondary: '#f8f9fa',
-    accent: '#007bff',
-    text: '#212529',
-    lightText: '#6c757d',
-    darkText: '#212529',
-    background: '#ffffff',
-    messageUser: '#007bff',
-    messageBot: '#f8f9fa',
-    error: '#dc3545',
+    accent: '#667eea',
+    text: '#2d3748',
+    lightText: '#718096',
+    darkText: '#1a202c',
+    background: '#f7fafc',
+    messageUser: '#667eea',
+    messageBot: '#edf2f7',
+    error: '#e53e3e',
+    gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
   }
 };
 
@@ -109,27 +111,28 @@ const ChatApplication = () => {
   return (
     <ThemeProvider theme={theme}>
       <GlobalStyles />
-      <AppLayout>
-        <Sidebar 
-          chats={chats} 
-          onSelectChat={handleSelectChat} 
-          onNewChat={handleNewChat} 
-          activeChatId={activeChat?._id} 
-          isLoading={isLoadingChats}
-        />
-        <MainContent>
-          {isLoadingMessages ? (
-            <LoadingIndicator /> 
-          ) : error ? (
-            <ErrorMessage message={error} />
-          ) : (
-            <ChatArea 
-              activeChat={activeChat} 
-              onMessageSent={handleMessageSent} 
-            />
-          )}
-        </MainContent>
-      </AppLayout>
+      <ResponsiveLayout
+        sidebar={
+          <Sidebar 
+            chats={chats} 
+            onSelectChat={handleSelectChat} 
+            onNewChat={handleNewChat} 
+            activeChatId={activeChat?._id} 
+            isLoading={isLoadingChats}
+          />
+        }
+      >
+        {isLoadingMessages ? (
+          <LoadingIndicator /> 
+        ) : error ? (
+          <ErrorMessage message={error} />
+        ) : (
+          <ChatArea 
+            activeChat={activeChat} 
+            onMessageSent={handleMessageSent} 
+          />
+        )}
+      </ResponsiveLayout>
     </ThemeProvider>
   );
 };
