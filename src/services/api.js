@@ -4,7 +4,7 @@ import axios from 'axios';
 // Certifique-se de que esta URL esteja correta e acessível pelo frontend
 // Em desenvolvimento, pode ser algo como 'http://localhost:3000/api'
 // Em produção, será a URL do seu servidor backend implantado
-const API_BASE_URL = 'https://chatbot-backend-lz8l.onrender.com/api'; 
+const API_BASE_URL = 'http://localhost:3000/api'; 
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -63,6 +63,51 @@ export const getChatById = async (chatId) => {
   } catch (error) {
     console.error('Erro ao buscar chat por ID:', error.response?.data || error.message);
     throw error.response?.data || new Error('Erro ao buscar detalhes do chat');
+  }
+};
+
+/**
+ * Exclui um chat pelo ID
+ * @param {string} chatId - O ID do chat a ser excluído
+ * @returns {Promise<void>}
+ */
+export const deleteChat = async (chatId) => {
+  try {
+    await apiClient.delete(`/chats/${chatId}`);
+  } catch (error) {
+    console.error('Erro ao excluir chat:', error.response?.data || error.message);
+    throw error.response?.data || new Error('Erro ao excluir chat');
+  }
+};
+
+/**
+ * Atualiza o título de um chat
+ * @param {string} chatId - ID do chat
+ * @param {string} title - Novo título
+ * @returns {Promise<object>} - Chat atualizado com {_id, title, createdAt, updatedAt}
+ */
+export const updateChatTitle = async (chatId, title) => {
+  try {
+    const { data } = await apiClient.put(`/chats/${chatId}/title`, { title });
+    return data;
+  } catch (error) {
+    console.error('Erro ao atualizar título do chat:', error.response?.data || error.message);
+    throw error.response?.data || new Error('Erro ao atualizar título do chat');
+  }
+};
+
+/**
+ * Solicita uma sugestão de título por IA e já atualiza o chat no backend
+ * @param {string} chatId - ID do chat
+ * @returns {Promise<object>} - Chat atualizado com {_id, title, createdAt, updatedAt}
+ */
+export const suggestChatTitle = async (chatId) => {
+  try {
+    const { data } = await apiClient.post(`/chats/${chatId}/suggest-title`);
+    return data;
+  } catch (error) {
+    console.error('Erro ao sugerir título do chat:', error.response?.data || error.message);
+    throw error.response?.data || new Error('Erro ao sugerir título do chat');
   }
 };
 

@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import styled, { ThemeProvider } from 'styled-components';
 import Sidebar from './components/Sidebar';
+import RenameChatModal from './components/RenameChatModal';
 import ChatArea from './components/ChatArea';
 import LoadingIndicator from './components/LoadingIndicator';
 import ErrorMessage from './components/ErrorMessage';
 import ResponsiveLayout from './components/ResponsiveLayout';
-import { getChats, getChatById, sendMessage } from './services/api'; 
+import { getChats, getChatById, sendMessage, deleteChat } from './services/api'; 
 import { GlobalStyles } from './styles/GlobalStyles';
+import ConfirmModal from './components/ConfirmModal';
 
 const theme = {
   colors: {
@@ -44,6 +46,10 @@ const ChatApplication = () => {
   const [isLoadingChats, setIsLoadingChats] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [error, setError] = useState(null);
+  const [chatToDelete, setChatToDelete] = useState(null);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [chatToRename, setChatToRename] = useState(null);
+  const [isRenameOpen, setIsRenameOpen] = useState(false);
 
   console.log("Iniciando o ChatApplication...");
 
@@ -119,6 +125,8 @@ const ChatApplication = () => {
             onNewChat={handleNewChat} 
             activeChatId={activeChat?._id} 
             isLoading={isLoadingChats}
+            onRequestDelete={(chat) => { setChatToDelete(chat); setIsConfirmOpen(true); }}
+            onRequestRename={(chat) => { setChatToRename(chat); setIsRenameOpen(true); }}
           />
         }
       >
@@ -130,6 +138,76 @@ const ChatApplication = () => {
           <ChatArea 
             activeChat={activeChat} 
             onMessageSent={handleMessageSent} 
+          />
+        )}
+        {isConfirmOpen && (
+          <ConfirmModal 
+            title="Excluir conversa?"
+            description={`Tem certeza que deseja excluir "${chatToDelete?.title}"? Essa ação não pode ser desfeita.`}
+            confirmLabel="Excluir"
+            cancelLabel="Cancelar"
+            onCancel={() => { setIsConfirmOpen(false); setChatToDelete(null); }}
+            onConfirm={async () => {
+              try {
+                if (chatToDelete?._id) {
+                  await deleteChat(chatToDelete._id);
+                  // Se o chat ativo foi excluído, limpar área de conversa
+                  if (activeChat?._id === chatToDelete._id) {
+                    setActiveChat(null);
+                  }
+                  await fetchChats();
+                }
+              } catch (err) {
+                console.error('Falha ao excluir chat', err);
+                setError('Falha ao excluir a conversa.');
+              } finally {
+                setIsConfirmOpen(false);
+                setChatToDelete(null);
+              }
+            }}
+            variant="danger"
+          />
+        )}
+        {isRenameOpen && (
+          <RenameChatModal
+            isOpen={isRenameOpen}
+            initialTitle={chatToRename?.title || ''}
+            onCancel={() => { setIsRenameOpen(false); setChatToRename(null); }}
+            onSuggest={async () => {
+              try {
+                if (!chatToRename?._id) return;
+                const { suggestChatTitle } = await import('./services/api');
+                const updated = await suggestChatTitle(chatToRename._id);
+                setChats(prev => prev.map(c => c._id === updated._id ? { ...c, title: updated.title, updatedAt: updated.updatedAt } : c));
+                if (activeChat?._id === updated._id) {
+                  setActiveChat(prev => ({ ...prev, title: updated.title }));
+                }
+                setIsRenameOpen(false);
+                setChatToRename(null);
+              } catch (err) {
+                console.error('Falha ao sugerir título', err);
+                setError(typeof err === 'string' ? err : 'Falha ao sugerir título.');
+              }
+            }}
+            onConfirm={async (newTitle) => {
+              try {
+                if (!chatToRename?._id || !newTitle) return;
+                const { updateChatTitle } = await import('./services/api');
+                const updated = await updateChatTitle(chatToRename._id, newTitle);
+                // Atualiza lista localmente sem refetch completo
+                setChats(prev => prev.map(c => c._id === updated._id ? { ...c, title: updated.title, updatedAt: updated.updatedAt } : c));
+                // Se o chat renomeado é o ativo, atualiza também
+                if (activeChat?._id === updated._id) {
+                  setActiveChat(prev => ({ ...prev, title: updated.title }));
+                }
+              } catch (err) {
+                console.error('Falha ao renomear chat', err);
+                setError(typeof err === 'string' ? err : 'Falha ao renomear a conversa.');
+              } finally {
+                setIsRenameOpen(false);
+                setChatToRename(null);
+              }
+            }}
           />
         )}
       </ResponsiveLayout>

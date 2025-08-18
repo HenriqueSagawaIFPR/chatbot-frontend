@@ -1,6 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import BotInfo from './BotInfo';
+import { FaTrash, FaPencilAlt } from "react-icons/fa";
 
 const SidebarContainer = styled.aside`
   width: 320px;
@@ -64,6 +65,11 @@ const ChatList = styled.ul`
 `;
 
 const ChatListItem = styled.li`
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   padding: 0.875rem 1rem;
   margin-bottom: 0.5rem;
   border-radius: 8px;
@@ -85,6 +91,33 @@ const ChatListItem = styled.li`
     color: white;
     font-weight: 500;
   }
+`;
+
+const ChatTitle = styled.span`
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const IconButton = styled.button`
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: ${props => props.theme.colors.lightText};
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  flex-shrink: 0;
+
+  ${ChatListItem}:hover & {
+    display: inline-flex;
+  }
+`;
+
+const Actions = styled.div`
+  display: flex;
+  gap: 6px;
 `;
 
 const NewChatButton = styled.button`
@@ -122,7 +155,7 @@ const Divider = styled.div`
   margin: 1rem 0 1.25rem 0;
 `;
 
-const Sidebar = ({ chats, onSelectChat, onNewChat, activeChatId }) => {
+const Sidebar = ({ chats, onSelectChat, onNewChat, activeChatId, onRequestDelete, onRequestRename }) => {
   return (
     <SidebarContainer>
       <BotInfo />
@@ -136,11 +169,27 @@ const Sidebar = ({ chats, onSelectChat, onNewChat, activeChatId }) => {
           )}
           {chats && chats.map(chat => (
             <ChatListItem 
-              key={chat._id} 
-              onClick={() => onSelectChat(chat._id)}
+              key={chat._id}
               className={chat._id === activeChatId ? 'active' : ''}
+              onClick={() => onSelectChat(chat._id)}
             >
-              {chat.title}
+              <ChatTitle>{chat.title}</ChatTitle>
+              <Actions>
+                <IconButton
+                  aria-label="Renomear conversa"
+                  title="Renomear conversa"
+                  onClick={(e) => { e.stopPropagation(); onRequestRename?.(chat); }}
+                >
+                  <FaPencilAlt size={16} />
+                </IconButton>
+                <IconButton
+                  aria-label="Excluir conversa"
+                  title="Excluir conversa"
+                  onClick={(e) => { e.stopPropagation(); onRequestDelete?.(chat); }}
+                >
+                  <FaTrash size={16} />
+                </IconButton>
+              </Actions>
             </ChatListItem>
           ))}
         </ChatList>
