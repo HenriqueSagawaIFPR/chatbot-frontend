@@ -4,7 +4,7 @@ import axios from 'axios';
 // Certifique-se de que esta URL esteja correta e acessível pelo frontend
 // Em desenvolvimento, pode ser algo como 'http://localhost:3000/api'
 // Em produção, será a URL do seu servidor backend implantado
-const API_BASE_URL = 'https://chatbot-backend-lz8l.onrender.com/api'; 
+const API_BASE_URL = 'http://localhost:3000/api'; 
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -12,6 +12,110 @@ const apiClient = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// Interceptor para adicionar token de autenticação automaticamente
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Interceptor para tratar erros de autenticação
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expirado ou inválido
+      localStorage.removeItem('token');
+      // Não redirecionar automaticamente, deixar o componente decidir
+    }
+    return Promise.reject(error);
+  }
+);
+
+// ===== FUNÇÕES DE AUTENTICAÇÃO =====
+
+/**
+ * Registra um novo usuário
+ * @param {object} userData - Dados do usuário { username, email, password }
+ * @returns {Promise<object>} - Resposta com user e token
+ */
+export const registerUser = async (userData) => {
+  try {
+    const { data } = await apiClient.post('/auth/register', userData);
+    return data;
+  } catch (error) {
+    console.error('Erro no registro:', error.response?.data || error.message);
+    throw error.response?.data || new Error('Erro no registro');
+  }
+};
+
+/**
+ * Faz login do usuário
+ * @param {object} credentials - Credenciais { username, password }
+ * @returns {Promise<object>} - Resposta com user e token
+ */
+export const loginUser = async (credentials) => {
+  try {
+    const { data } = await apiClient.post('/auth/login', credentials);
+    return data;
+  } catch (error) {
+    console.error('Erro no login:', error.response?.data || error.message);
+    throw error.response?.data || new Error('Erro no login');
+  }
+};
+
+/**
+ * Obtém dados do usuário logado
+ * @returns {Promise<object>} - Dados do usuário
+ */
+export const getCurrentUser = async () => {
+  try {
+    const { data } = await apiClient.get('/auth/me');
+    return data.user;
+  } catch (error) {
+    console.error('Erro ao buscar usuário:', error.response?.data || error.message);
+    throw error.response?.data || new Error('Erro ao buscar usuário');
+  }
+};
+
+/**
+ * Atualiza perfil do usuário
+ * @param {object} profileData - Dados do perfil { username }
+ * @returns {Promise<object>} - Usuário atualizado
+ */
+export const updateProfile = async (profileData) => {
+  try {
+    const { data } = await apiClient.put('/auth/profile', profileData);
+    return data.user;
+  } catch (error) {
+    console.error('Erro ao atualizar perfil:', error.response?.data || error.message);
+    throw error.response?.data || new Error('Erro ao atualizar perfil');
+  }
+};
+
+/**
+ * Altera senha do usuário
+ * @param {object} passwordData - Dados da senha { currentPassword, newPassword }
+ * @returns {Promise<void>}
+ */
+export const changePassword = async (passwordData) => {
+  try {
+    await apiClient.post('/auth/change-password', passwordData);
+  } catch (error) {
+    console.error('Erro ao alterar senha:', error.response?.data || error.message);
+    throw error.response?.data || new Error('Erro ao alterar senha');
+  }
+};
+
+// ===== FUNÇÕES DE CHAT (AGORA AUTENTICADAS) =====
 
 /**
  * Envia uma mensagem para o backend.
@@ -33,6 +137,15 @@ export const sendMessage = async (message, chatId) => {
     return data; // Espera-se { response: "texto", chatId: "id_do_chat" }
   } catch (error) {
     console.error('Erro ao enviar mensagem:', error.response?.data || error.message);
+    
+    // Verificar se é erro de limite atingido
+    if (error.response?.status === 403 && error.response?.data?.limitReached) {
+      const limitError = new Error(error.response.data.error);
+      limitError.limitReached = true;
+      limitError.messageCount = error.response.data.messageCount;
+      throw limitError;
+    }
+    
     throw error.response?.data || new Error('Erro de comunicação com a API');
   }
 };
@@ -44,7 +157,7 @@ export const sendMessage = async (message, chatId) => {
 export const getChats = async () => {
   try {
     const { data } = await apiClient.get('/chats');
-    return data; // Espera-se um array [{ _id, title, ... }, ...]
+    return data; // Espera-se um array [{ _id, title, ... }, ... ]
   } catch (error) {
     console.error('Erro ao buscar chats:', error.response?.data || error.message);
     throw error.response?.data || new Error('Erro ao buscar lista de chats');
@@ -188,5 +301,4 @@ export const getUserInfo = async () => {
 };
 
 // Você pode adicionar mais funções aqui conforme necessário, como deletar chat, etc.
-
 

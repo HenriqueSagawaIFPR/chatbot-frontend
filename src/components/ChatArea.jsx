@@ -203,18 +203,29 @@ const WelcomeMessage = styled.div`
 `;
 
 // Componente ChatArea
-const ChatArea = ({ activeChat, onMessageSent }) => {
+const ChatArea = ({ activeChat, onMessageSent, isGuest = false }) => {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const messagesEndRef = useRef(null);
+  const [messageCount, setMessageCount] = useState(() => {
+    if (isGuest) {
+      const saved = localStorage.getItem('guestMessageCount');
+      return saved ? parseInt(saved) : 0;
+    }
+    return 0;
+  });
 
   // Mensagens locais para exibição (virão de activeChat.messages)
   const [displayMessages, setDisplayMessages] = useState([]);
 
   // Atualiza mensagens quando activeChat muda
   useEffect(() => {
-    if (activeChat && activeChat.messages) {
+    if (isGuest) {
+      // Para usuários convidados, sempre começar com chat vazio
+      setDisplayMessages([]);
+      setError(null);
+    } else if (activeChat && activeChat.messages) {
       // Mapeia as mensagens do backend para o formato do frontend
       setDisplayMessages(activeChat.messages.map((msg, index) => ({
         id: `${activeChat._id}-${index}`, // Cria um ID único para a chave React
@@ -226,7 +237,14 @@ const ChatArea = ({ activeChat, onMessageSent }) => {
     } else {
       setDisplayMessages([]); // Limpa mensagens se não houver chat ativo
     }
-  }, [activeChat]);
+  }, [activeChat, isGuest]);
+
+  // Salvar contador de mensagens no localStorage para usuários convidados
+  useEffect(() => {
+    if (isGuest) {
+      localStorage.setItem('guestMessageCount', messageCount.toString());
+    }
+  }, [messageCount, isGuest]);
 
   // Rola para a mensagem mais recente
   const scrollToBottom = () => {
@@ -240,6 +258,14 @@ const ChatArea = ({ activeChat, onMessageSent }) => {
   // Função para enviar mensagem
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
+
+    console.log('Tentando enviar mensagem:', { isGuest, messageCount, inputMessage });
+
+    // Verificar limite para usuários convidados
+    if (isGuest && messageCount >= 3) {
+      setError('Limite de 3 mensagens atingido. Faça login para continuar conversando.');
+      return;
+    }
 
     const userMessageText = inputMessage;
     setInputMessage('');
@@ -256,8 +282,13 @@ const ChatArea = ({ activeChat, onMessageSent }) => {
     setDisplayMessages(prev => [...prev, optimisticUserMessage]);
 
     try {
-      // Se não houver activeChat, envie para a API sem chatId (ela criará um novo chat)
-      const response = await sendMessage(userMessageText, activeChat ? activeChat._id : undefined);
+      console.log('Enviando mensagem para API:', { userMessageText, isGuest, activeChatId: activeChat?._id });
+      
+      // Para usuários convidados, sempre enviar sem chatId para criar novo chat
+      // Para usuários logados, enviar com chatId se existir
+      const response = await sendMessage(userMessageText, isGuest ? undefined : (activeChat ? activeChat._id : undefined));
+
+      console.log('Resposta da API:', response);
 
       // Adiciona a resposta do bot visualmente
       const botResponse = {
@@ -268,6 +299,11 @@ const ChatArea = ({ activeChat, onMessageSent }) => {
       };
       setDisplayMessages(prev => [...prev, botResponse]);
 
+      // Incrementar contador de mensagens para usuários convidados
+      if (isGuest) {
+        setMessageCount(prev => prev + 1);
+      }
+
       // Notifica o componente pai que uma mensagem foi enviada (para atualizar a lista de chats, etc)
       if (onMessageSent) {
         onMessageSent(response.chatId);
@@ -275,14 +311,21 @@ const ChatArea = ({ activeChat, onMessageSent }) => {
 
     } catch (err) {
       console.error('Erro ao enviar mensagem:', err);
-      setError('Falha ao enviar mensagem. Tente novamente.');
-      const errorMessage = {
-        id: `error-${Date.now()}`,
-        text: "Desculpe, tive um problema ao processar sua mensagem. Por favor, tente novamente.",
-        isUser: false,
-        isError: true
-      };
-      setDisplayMessages(prev => [...prev, errorMessage]);
+      
+      // Verificar se é erro de limite atingido
+      if (err.limitReached) {
+        setError('Limite de 3 mensagens atingido. Faça login para continuar conversando.');
+        setMessageCount(3); // Força o limite
+      } else {
+        setError('Falha ao enviar mensagem. Tente novamente.');
+        const errorMessage = {
+          id: `error-${Date.now()}`,
+          text: "Desculpe, tive um problema ao processar sua mensagem. Por favor, tente novamente.",
+          isUser: false,
+          isError: true
+        };
+        setDisplayMessages(prev => [...prev, errorMessage]);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -295,8 +338,9 @@ const ChatArea = ({ activeChat, onMessageSent }) => {
     }
   };
 
-  // Se não houver chat ativo, mostra uma mensagem de boas-vindas, mas mantém o input
-  if (!activeChat) {
+  // Para usuários convidados, sempre mostrar a área de chat com mensagens
+  // Para usuários logados, mostrar tela de boas-vindas se não houver chat ativo
+  if (!isGuest && !activeChat) {
     return (
         <ChatAreaContainer>
             <WelcomeMessage>
@@ -326,6 +370,12 @@ const ChatArea = ({ activeChat, onMessageSent }) => {
   return (
     <ChatAreaContainer>
       <MessagesContainer>
+        {isGuest && displayMessages.length === 0 && (
+          <WelcomeMessage>
+            <h2>Bem-vindo ao Chatbot!</h2>
+            <p>Você está usando o chat como convidado. Você tem <strong>{3 - messageCount}</strong> mensagens restantes. Faça login para conversar sem limites e salvar suas conversas.</p>
+          </WelcomeMessage>
+        )}
         {displayMessages.map(message => (
           message.isError ? (
             <ErrorMessage 
@@ -363,13 +413,13 @@ const ChatArea = ({ activeChat, onMessageSent }) => {
           value={inputMessage}
           onChange={(e) => setInputMessage(e.target.value)}
           onKeyPress={handleKeyPress}
-          disabled={isLoading}
+          disabled={isLoading || (isGuest && messageCount >= 3)}
         />
         <SendButton 
           onClick={handleSendMessage}
-          disabled={!inputMessage.trim() || isLoading}
+          disabled={!inputMessage.trim() || isLoading || (isGuest && messageCount >= 3)}
         >
-          Enviar
+          {isGuest && messageCount >= 3 ? 'Limite Atingido' : 'Enviar'}
         </SendButton>
       </InputContainer>
     </ChatAreaContainer>

@@ -1,7 +1,8 @@
 import React from 'react';
 import styled from 'styled-components';
 import BotInfo from './BotInfo';
-import { FaTrash, FaPencilAlt } from "react-icons/fa";
+import { FaTrash, FaPencilAlt, FaUser, FaSignOutAlt } from "react-icons/fa";
+import { useAuth } from '../contexts/AuthContext';
 
 const SidebarContainer = styled.aside`
   width: 320px;
@@ -32,6 +33,65 @@ const SidebarContent = styled.div`
   flex: 1;
   display: flex;
   flex-direction: column;
+`;
+
+const UserSection = styled.div`
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  color: white;
+  text-align: center;
+`;
+
+const UserAvatar = styled.div`
+  width: 50px;
+  height: 50px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 0.75rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+`;
+
+const UserName = styled.div`
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+`;
+
+const UserEmail = styled.div`
+  font-size: 0.9rem;
+  opacity: 0.9;
+  margin-bottom: 1rem;
+`;
+
+const UserActions = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+`;
+
+const UserButton = styled.button`
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+  }
 `;
 
 const SidebarHeader = styled.div`
@@ -155,44 +215,113 @@ const Divider = styled.div`
   margin: 1rem 0 1.25rem 0;
 `;
 
-const Sidebar = ({ chats, onSelectChat, onNewChat, activeChatId, onRequestDelete, onRequestRename }) => {
+const Sidebar = ({ chats, onSelectChat, onNewChat, activeChatId, onRequestDelete, onRequestRename, onShowProfile, isGuest = false, onShowLogin }) => {
+  const { user, logout } = useAuth();
+
+  const getInitials = (username) => {
+    return username
+      .split(' ')
+      .map(name => name.charAt(0))
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   return (
     <SidebarContainer>
       <BotInfo />
       <SidebarContent>
-        <SidebarHeader>Conversas</SidebarHeader>
-        <NewChatButton onClick={onNewChat}>+ Nova Conversa</NewChatButton>
-        <Divider />
-        <ChatList>
-          {chats && chats.length === 0 && (
-            <li style={{ color: '#bbb', padding: '1rem 0', fontSize: '0.95rem' }}>Nenhuma conversa encontrada.</li>
+        {isGuest ? (
+          <UserSection>
+            <UserAvatar>
+              👤
+            </UserAvatar>
+            <UserName>Convidado</UserName>
+            <UserEmail>Faça login para salvar suas conversas</UserEmail>
+            <UserActions>
+              <UserButton onClick={() => {
+                localStorage.removeItem('guestMessageCount'); // Limpar contador
+                if (onShowLogin) {
+                  onShowLogin();
+                }
+              }}>
+                <FaUser size={14} />
+                Login
+              </UserButton>
+            </UserActions>
+          </UserSection>
+        ) : user ? (
+          <UserSection>
+            <UserAvatar>
+              {getInitials(user.username)}
+            </UserAvatar>
+            <UserName>{user.username}</UserName>
+            <UserEmail>{user.email}</UserEmail>
+            <UserActions>
+              <UserButton onClick={onShowProfile}>
+                <FaUser size={14} />
+                Perfil
+              </UserButton>
+              <UserButton onClick={logout}>
+                <FaSignOutAlt size={14} />
+                Sair
+              </UserButton>
+            </UserActions>
+          </UserSection>
+        ) : null}
+        
+        {isGuest ? (
+          <>
+            <SidebarHeader>Chat Convidado</SidebarHeader>
+            <div style={{ 
+              padding: '1rem', 
+              background: '#f8f9fa', 
+              borderRadius: '8px', 
+              marginBottom: '1rem',
+              fontSize: '0.9rem',
+              color: '#666'
+            }}>
+              <strong>Limite de 3 mensagens</strong><br/>
+              Faça login para conversar sem limites e salvar suas conversas.
+            </div>
+          </>
+        ) : (
+          <>
+            <SidebarHeader>Conversas</SidebarHeader>
+            <NewChatButton onClick={onNewChat}>+ Nova Conversa</NewChatButton>
+            <Divider />
+            <ChatList>
+              {chats && chats.length === 0 && (
+                <li style={{ color: '#bbb', padding: '1rem 0', fontSize: '0.95rem' }}>Nenhuma conversa encontrada.</li>
           )}
-          {chats && chats.map(chat => (
-            <ChatListItem 
-              key={chat._id}
-              className={chat._id === activeChatId ? 'active' : ''}
-              onClick={() => onSelectChat(chat._id)}
-            >
-              <ChatTitle>{chat.title}</ChatTitle>
-              <Actions>
-                <IconButton
-                  aria-label="Renomear conversa"
-                  title="Renomear conversa"
-                  onClick={(e) => { e.stopPropagation(); onRequestRename?.(chat); }}
+              {chats && chats.map(chat => (
+                <ChatListItem 
+                  key={chat._id}
+                  className={chat._id === activeChatId ? 'active' : ''}
+                  onClick={() => onSelectChat(chat._id)}
                 >
-                  <FaPencilAlt size={16} />
-                </IconButton>
-                <IconButton
-                  aria-label="Excluir conversa"
-                  title="Excluir conversa"
-                  onClick={(e) => { e.stopPropagation(); onRequestDelete?.(chat); }}
-                >
-                  <FaTrash size={16} />
-                </IconButton>
-              </Actions>
-            </ChatListItem>
-          ))}
-        </ChatList>
+                  <ChatTitle>{chat.title}</ChatTitle>
+                  <Actions>
+                    <IconButton
+                      aria-label="Renomear conversa"
+                      title="Renomear conversa"
+                      onClick={(e) => { e.stopPropagation(); onRequestRename?.(chat); }}
+                    >
+                      <FaPencilAlt size={16} />
+                    </IconButton>
+                    <IconButton
+                      aria-label="Excluir conversa"
+                      title="Excluir conversa"
+                      onClick={(e) => { e.stopPropagation(); onRequestDelete?.(chat); }}
+                    >
+                      <FaTrash size={16} />
+                    </IconButton>
+                  </Actions>
+                </ChatListItem>
+              ))}
+            </ChatList>
+          </>
+        )}
       </SidebarContent>
     </SidebarContainer>
   );

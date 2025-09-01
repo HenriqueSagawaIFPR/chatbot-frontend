@@ -6,9 +6,12 @@ import ChatArea from './components/ChatArea';
 import LoadingIndicator from './components/LoadingIndicator';
 import ErrorMessage from './components/ErrorMessage';
 import ResponsiveLayout from './components/ResponsiveLayout';
+import LoginForm from './components/LoginForm';
+import UserProfile from './components/UserProfile';
 import { getChats, getChatById, sendMessage, deleteChat } from './services/api'; 
 import { GlobalStyles } from './styles/GlobalStyles';
 import ConfirmModal from './components/ConfirmModal';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 const theme = {
   colors: {
@@ -41,6 +44,7 @@ const MainContent = styled.main`
 `;
 
 const ChatApplication = () => {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [chats, setChats] = useState([]);
   const [activeChat, setActiveChat] = useState(null);
   const [isLoadingChats, setIsLoadingChats] = useState(true);
@@ -50,10 +54,14 @@ const ChatApplication = () => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [chatToRename, setChatToRename] = useState(null);
   const [isRenameOpen, setIsRenameOpen] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [showLoginForm, setShowLoginForm] = useState(false);
 
   console.log("Iniciando o ChatApplication...");
 
   const fetchChats = useCallback(async () => {
+    if (!isAuthenticated) return;
+    
     try {
       setError(null);
       const fetchedChats = await getChats();
@@ -65,11 +73,13 @@ const ChatApplication = () => {
     } finally {
       setIsLoadingChats(false);
     }
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
-    fetchChats();
-  }, [fetchChats]);
+    if (isAuthenticated) {
+      fetchChats();
+    }
+  }, [fetchChats, isAuthenticated]);
 
   const handleSelectChat = useCallback(async (chatId) => {
     if (!chatId) {
@@ -96,6 +106,7 @@ const ChatApplication = () => {
   const handleNewChat = () => {
     setActiveChat(null);
     setError(null);
+    setShowProfile(false);
   };
 
   const handleMessageSent = useCallback(async (chatId) => {
@@ -114,6 +125,89 @@ const ChatApplication = () => {
     }
   }, [fetchChats, activeChat, handleSelectChat]);
 
+  const handleShowProfile = () => {
+    setShowProfile(true);
+    setActiveChat(null);
+    setError(null);
+  };
+
+  // Se ainda está carregando a autenticação, mostrar loading
+  if (authLoading) {
+    return (
+      <ThemeProvider theme={theme}>
+        <GlobalStyles />
+        <LoadingIndicator />
+      </ThemeProvider>
+    );
+  }
+
+    // Se não está autenticado, mostrar chat com limite de mensagens ou formulário de login
+  if (!isAuthenticated) {
+    if (showLoginForm) {
+      return (
+        <ThemeProvider theme={theme}>
+          <GlobalStyles />
+          <LoginForm onBack={() => setShowLoginForm(false)} />
+        </ThemeProvider>
+      );
+    }
+    
+    return (
+      <ThemeProvider theme={theme}>
+        <GlobalStyles />
+        <ResponsiveLayout
+          sidebar={
+            <Sidebar 
+              chats={[]} 
+              onSelectChat={() => {}} 
+              onNewChat={() => {}} 
+              activeChatId={null} 
+              isLoading={false}
+              onRequestDelete={() => {}}
+              onRequestRename={() => {}}
+              onShowProfile={() => {}}
+              isGuest={true}
+              onShowLogin={() => setShowLoginForm(true)}
+            />
+          }
+        >
+          <ChatArea 
+            activeChat={null} 
+            onMessageSent={() => {}} 
+            isGuest={true}
+            key="guest-chat" // Força sempre um novo chat
+          />
+        </ResponsiveLayout>
+      </ThemeProvider>
+    );
+  }
+
+  // Se está mostrando o perfil, mostrar componente de perfil
+  if (showProfile) {
+    return (
+      <ThemeProvider theme={theme}>
+        <GlobalStyles />
+        <ResponsiveLayout
+          sidebar={
+            <Sidebar 
+              chats={chats} 
+              onSelectChat={handleSelectChat} 
+              onNewChat={handleNewChat} 
+              activeChatId={activeChat?._id} 
+              isLoading={isLoadingChats}
+              onRequestDelete={(chat) => { setChatToDelete(chat); setIsConfirmOpen(true); }}
+              onRequestRename={(chat) => { setChatToRename(chat); setIsRenameOpen(true); }}
+              onShowProfile={handleShowProfile}
+            />
+          }
+        >
+          <UserProfile />
+        </ResponsiveLayout>
+      </ThemeProvider>
+    );
+  }
+
+  // Chat principal
   return (
     <ThemeProvider theme={theme}>
       <GlobalStyles />
@@ -127,6 +221,7 @@ const ChatApplication = () => {
             isLoading={isLoadingChats}
             onRequestDelete={(chat) => { setChatToDelete(chat); setIsConfirmOpen(true); }}
             onRequestRename={(chat) => { setChatToRename(chat); setIsRenameOpen(true); }}
+            onShowProfile={handleShowProfile}
           />
         }
       >
@@ -216,7 +311,11 @@ const ChatApplication = () => {
 };
 
 function App() {
-  return <ChatApplication />;
+  return (
+    <AuthProvider>
+      <ChatApplication />
+    </AuthProvider>
+  );
 }
 
 export default App;
