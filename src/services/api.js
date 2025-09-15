@@ -284,6 +284,57 @@ export const getRankingBots = async () => {
   }
 };
 
+// ===== FUNÇÕES DE ADMINISTRAÇÃO =====
+export const adminListUsers = async () => {
+  try {
+    const { data } = await apiClient.get('/admin/users');
+    return data;
+  } catch (error) {
+    console.error('Erro ao listar usuários (admin):', error.response?.data || error.message);
+    throw error.response?.data || new Error('Erro ao listar usuários');
+  }
+};
+
+export const adminUpdateUser = async (userId, update) => {
+  try {
+    const { data } = await apiClient.put(`/admin/users/${userId}/status`, update);
+    return data.user;
+  } catch (error) {
+    console.error('Erro ao atualizar usuário (admin):', error.response?.data || error.message);
+    throw error.response?.data || new Error('Erro ao atualizar usuário');
+  }
+};
+
+export const adminListChats = async () => {
+  try {
+    const { data } = await apiClient.get('/admin/chats');
+    return data;
+  } catch (error) {
+    console.error('Erro ao listar chats (admin):', error.response?.data || error.message);
+    throw error.response?.data || new Error('Erro ao listar chats');
+  }
+};
+
+export const adminGetChat = async (chatId) => {
+  try {
+    const { data } = await apiClient.get(`/admin/chats/${chatId}`);
+    return data;
+  } catch (error) {
+    console.error('Erro ao obter chat (admin):', error.response?.data || error.message);
+    throw error.response?.data || new Error('Erro ao obter chat');
+  }
+};
+
+export const adminDeleteChat = async (chatId) => {
+  try {
+    const { data } = await apiClient.delete(`/admin/chats/${chatId}`);
+    return data;
+  } catch (error) {
+    console.error('Erro ao excluir chat (admin):', error.response?.data || error.message);
+    throw error.response?.data || new Error('Erro ao excluir chat');
+  }
+};
+
 /**
  * Busca informações do usuário (IP, etc.)
  * @returns {Promise<object>} - Informações do usuário

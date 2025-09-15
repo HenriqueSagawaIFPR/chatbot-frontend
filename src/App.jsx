@@ -8,6 +8,7 @@ import ErrorMessage from './components/ErrorMessage';
 import ResponsiveLayout from './components/ResponsiveLayout';
 import LoginForm from './components/LoginForm';
 import UserProfile from './components/UserProfile';
+import AdminPanel from './components/AdminPanel';
 import { getChats, getChatById, sendMessage, deleteChat } from './services/api'; 
 import { GlobalStyles } from './styles/GlobalStyles';
 import ConfirmModal from './components/ConfirmModal';
@@ -56,6 +57,7 @@ const ChatApplication = () => {
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showLoginForm, setShowLoginForm] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
 
   console.log("Iniciando o ChatApplication...");
 
@@ -131,6 +133,13 @@ const ChatApplication = () => {
     setError(null);
   };
 
+  const handleShowAdmin = () => {
+    setShowAdmin(true);
+    setShowProfile(false);
+    setActiveChat(null);
+    setError(null);
+  };
+
   // Se ainda está carregando a autenticação, mostrar loading
   if (authLoading) {
     return (
@@ -198,11 +207,22 @@ const ChatApplication = () => {
               onRequestDelete={(chat) => { setChatToDelete(chat); setIsConfirmOpen(true); }}
               onRequestRename={(chat) => { setChatToRename(chat); setIsRenameOpen(true); }}
               onShowProfile={handleShowProfile}
+              onShowAdmin={handleShowAdmin}
             />
           }
         >
           <UserProfile />
         </ResponsiveLayout>
+      </ThemeProvider>
+    );
+  }
+
+  // Painel Admin
+  if (showAdmin) {
+    return (
+      <ThemeProvider theme={theme}>
+        <GlobalStyles />
+        <AdminPanel onBack={() => setShowAdmin(false)} />
       </ThemeProvider>
     );
   }
@@ -222,6 +242,7 @@ const ChatApplication = () => {
             onRequestDelete={(chat) => { setChatToDelete(chat); setIsConfirmOpen(true); }}
             onRequestRename={(chat) => { setChatToRename(chat); setIsRenameOpen(true); }}
             onShowProfile={handleShowProfile}
+            onShowAdmin={handleShowAdmin}
           />
         }
       >

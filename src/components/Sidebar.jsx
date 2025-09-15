@@ -215,7 +215,7 @@ const Divider = styled.div`
   margin: 1rem 0 1.25rem 0;
 `;
 
-const Sidebar = ({ chats, onSelectChat, onNewChat, activeChatId, onRequestDelete, onRequestRename, onShowProfile, isGuest = false, onShowLogin }) => {
+const Sidebar = ({ chats, onSelectChat, onNewChat, activeChatId, onRequestDelete, onRequestRename, onShowProfile, isGuest = false, onShowLogin, onShowAdmin }) => {
   const { user, logout } = useAuth();
 
   const getInitials = (username) => {
@@ -262,6 +262,11 @@ const Sidebar = ({ chats, onSelectChat, onNewChat, activeChatId, onRequestDelete
                 <FaUser size={14} />
                 Perfil
               </UserButton>
+              {user?.role === 'admin' && (
+                <UserButton onClick={onShowAdmin}>
+                  🛡️ Admin
+                </UserButton>
+              )}
               <UserButton onClick={logout}>
                 <FaSignOutAlt size={14} />
                 Sair
