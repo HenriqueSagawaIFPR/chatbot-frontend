@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
-import { adminListUsers, adminUpdateUser, adminListChats, adminGetChat, adminDeleteChat } from '../services/api';
+import { adminListUsers, adminUpdateUser, adminListChats, adminGetChat, adminDeleteChat, adminGetBotConfig, adminUpdateBotConfig } from '../services/api';
 import { FaUsers, FaComments, FaEye, FaTrash, FaUserShield, FaUserSlash, FaUserCheck } from 'react-icons/fa';
 
 const Container = styled.div`
@@ -149,6 +149,9 @@ const AdminPanel = ({ onBack }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [chatQuery, setChatQuery] = useState('');
+  const [botText, setBotText] = useState('');
+  const [botUpdatedAt, setBotUpdatedAt] = useState(null);
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -163,6 +166,10 @@ const AdminPanel = ({ onBack }) => {
         } else if (view === 'chats') {
           const data = await adminListChats();
           setChats(data);
+        } else if (view === 'bot') {
+          const cfg = await adminGetBotConfig();
+          setBotText(cfg.systemInstruction || '');
+          setBotUpdatedAt(cfg.updatedAt || null);
         }
       } catch (e) {
         setError(e.error || 'Erro ao carregar dados');
@@ -236,9 +243,13 @@ const AdminPanel = ({ onBack }) => {
         <NavButton $active={view === 'chats'} onClick={() => setView('chats')}>
           <FaComments /> Chats
         </NavButton>
+        <NavButton $active={view === 'bot'} onClick={() => setView('bot')}>
+          🧠 Bot
+        </NavButton>
       </Sidebar>
       <Main>
         {error && <Card style={{ borderColor: '#feb2b2', background: '#fff5f5' }}>{error}</Card>}
+        {success && <Card style={{ borderColor: '#9ae6b4', background: '#f0fff4' }}>{success}</Card>}
         {view === 'users' && (
           <Card>
             <Title>Usuários</Title>
@@ -311,6 +322,44 @@ const AdminPanel = ({ onBack }) => {
               )}
             </Card>
           </div>
+        )}
+
+        {view === 'bot' && (
+          <Card>
+            <Toolbar>
+              <Title style={{ margin: 0 }}>Personalidade do Bot</Title>
+              {botUpdatedAt && <Small>Atualizado: {new Date(botUpdatedAt).toLocaleString()}</Small>}
+            </Toolbar>
+            <Small>Edite abaixo a instrução do sistema/persona usada pelo modelo.</Small>
+            <div style={{ height: 8 }} />
+            {loading ? (
+              <Small>Carregando...</Small>
+            ) : (
+              <>
+                <TextArea value={botText} onChange={(e) => { setBotText(e.target.value); setSuccess(''); }} />
+                <div style={{ height: 8 }} />
+                <ActionsGroup>
+                  <Action 
+                    $variant="primary"
+                    onClick={async () => {
+                      try {
+                        setLoading(true);
+                        setError('');
+                        setSuccess('');
+                        const saved = await adminUpdateBotConfig(botText);
+                        setBotUpdatedAt(saved.updatedAt || new Date().toISOString());
+                        setSuccess('Personalidade salva com sucesso.');
+                      } catch (e) {
+                        setError(e.error || 'Erro ao salvar personalidade');
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                  >Salvar</Action>
+                </ActionsGroup>
+              </>
+            )}
+          </Card>
         )}
       </Main>
     </Container>

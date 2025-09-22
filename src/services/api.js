@@ -4,7 +4,7 @@ import axios from 'axios';
 // Certifique-se de que esta URL esteja correta e acessível pelo frontend
 // Em desenvolvimento, pode ser algo como 'http://localhost:3000/api'
 // Em produção, será a URL do seu servidor backend implantado
-const API_BASE_URL = 'https://chatbot-backend-lz8l.onrender.com/api'; 
+const API_BASE_URL = 'http://localhost:3000/api'; 
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -332,6 +332,27 @@ export const adminDeleteChat = async (chatId) => {
   } catch (error) {
     console.error('Erro ao excluir chat (admin):', error.response?.data || error.message);
     throw error.response?.data || new Error('Erro ao excluir chat');
+  }
+};
+
+// ===== CONFIGURAÇÃO DO BOT (ADMIN) =====
+export const adminGetBotConfig = async () => {
+  try {
+    const { data } = await apiClient.get('/admin/bot-config');
+    return data; // { key, systemInstruction, updatedAt? }
+  } catch (error) {
+    console.error('Erro ao obter configuração do bot (admin):', error.response?.data || error.message);
+    throw error.response?.data || new Error('Erro ao obter configuração do bot');
+  }
+};
+
+export const adminUpdateBotConfig = async (systemInstruction) => {
+  try {
+    const { data } = await apiClient.put('/admin/bot-config', { systemInstruction });
+    return data; // { key, systemInstruction, updatedAt }
+  } catch (error) {
+    console.error('Erro ao atualizar configuração do bot (admin):', error.response?.data || error.message);
+    throw error.response?.data || new Error('Erro ao atualizar configuração do bot');
   }
 };
 
