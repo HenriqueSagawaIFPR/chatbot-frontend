@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
-import { adminListUsers, adminUpdateUser, adminListChats, adminGetChat, adminDeleteChat, adminGetBotConfig, adminUpdateBotConfig } from '../services/api';
-import { FaUsers, FaComments, FaEye, FaTrash, FaUserShield, FaUserSlash, FaUserCheck } from 'react-icons/fa';
+import { adminListUsers, adminUpdateUser, adminListChats, adminGetChat, adminDeleteChat, adminGetBotConfig, adminUpdateBotConfig, adminGetAnalytics, adminGetLogs, adminGetAccessLogs } from '../services/api';
+import { FaUsers, FaComments, FaEye, FaTrash, FaUserShield, FaUserSlash, FaUserCheck, FaChartBar, FaList } from 'react-icons/fa';
 
 const Container = styled.div`
   display: flex;
@@ -152,6 +152,9 @@ const AdminPanel = ({ onBack }) => {
   const [botText, setBotText] = useState('');
   const [botUpdatedAt, setBotUpdatedAt] = useState(null);
   const [success, setSuccess] = useState('');
+  const [analytics, setAnalytics] = useState(null);
+  const [logs, setLogs] = useState([]);
+  const [accessLogs, setAccessLogs] = useState([]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -170,6 +173,16 @@ const AdminPanel = ({ onBack }) => {
           const cfg = await adminGetBotConfig();
           setBotText(cfg.systemInstruction || '');
           setBotUpdatedAt(cfg.updatedAt || null);
+        } else if (view === 'analytics') {
+          const data = await adminGetAnalytics();
+          setAnalytics(data);
+        } else if (view === 'logs') {
+          const [l1, l2] = await Promise.all([
+            adminGetLogs(200),
+            adminGetAccessLogs(200)
+          ]);
+          setLogs(l1);
+          setAccessLogs(l2);
         }
       } catch (e) {
         setError(e.error || 'Erro ao carregar dados');
@@ -245,6 +258,12 @@ const AdminPanel = ({ onBack }) => {
         </NavButton>
         <NavButton $active={view === 'bot'} onClick={() => setView('bot')}>
           🧠 Bot
+        </NavButton>
+        <NavButton $active={view === 'analytics'} onClick={() => setView('analytics')}>
+          <FaChartBar /> Analytics
+        </NavButton>
+        <NavButton $active={view === 'logs'} onClick={() => setView('logs')}>
+          <FaList /> Logs
         </NavButton>
       </Sidebar>
       <Main>
@@ -360,6 +379,119 @@ const AdminPanel = ({ onBack }) => {
               </>
             )}
           </Card>
+        )}
+
+        {view === 'analytics' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <Card>
+              <Title>KPIs</Title>
+              {loading ? (
+                <Small>Carregando...</Small>
+              ) : analytics ? (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <Card>
+                    <div>Total usuários</div>
+                    <strong>{analytics.users?.total ?? 0}</strong>
+                    <Small>Ativos: {analytics.users?.active ?? 0} • Admins: {analytics.users?.admins ?? 0}</Small>
+                  </Card>
+                  <Card>
+                    <div>Total chats</div>
+                    <strong>{analytics.chats?.total ?? 0}</strong>
+                    <Small>Msgs: {analytics.chats?.totalMessages ?? 0} • Média/chat: {analytics.chats?.avgMessagesPerChat ?? 0}</Small>
+                  </Card>
+                  <Card>
+                    <div>Tempo resposta médio</div>
+                    <strong>{analytics.performance?.avgMs ?? 0} ms</strong>
+                    <Small>P95: {analytics.performance?.p95Ms ?? 0} ms</Small>
+                  </Card>
+                  <Card>
+                    <div>Erros (7 dias)</div>
+                    <strong>{analytics.errors?.last7Days ?? 0}</strong>
+                  </Card>
+                </div>
+              ) : (
+                <Small>Sem dados</Small>
+              )}
+            </Card>
+
+            <Card>
+              <Title>Séries temporais (7 dias)</Title>
+              {loading ? (
+                <Small>Carregando...</Small>
+              ) : analytics ? (
+                <div>
+                  <div style={{ marginBottom: 8 }}>
+                    <strong>Chats por dia</strong>
+                    {(analytics.timeseries?.chatsPerDay || []).map(item => (
+                      <div key={`c-${item._id}`}><Small>{item._id}: {item.count}</Small></div>
+                    ))}
+                  </div>
+                  <div style={{ marginBottom: 8 }}>
+                    <strong>Mensagens por dia</strong>
+                    {(analytics.timeseries?.messagesPerDay || []).map(item => (
+                      <div key={`m-${item._id}`}><Small>{item._id}: {item.count}</Small></div>
+                    ))}
+                  </div>
+                  <div>
+                    <strong>Acessos por dia</strong>
+                    {(analytics.timeseries?.accessesPerDay || []).map(item => (
+                      <div key={`a-${item._id}`}><Small>{item._id}: {item.count}</Small></div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <Small>Sem dados</Small>
+              )}
+            </Card>
+          </div>
+        )}
+
+        {view === 'logs' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <Card>
+              <Toolbar>
+                <Title style={{ margin: 0 }}>Logs do Bot</Title>
+                <Small>Últimos {logs.length}</Small>
+              </Toolbar>
+              {loading ? <Small>Carregando...</Small> : (
+                <div style={{ maxHeight: 420, overflow: 'auto' }}>
+                  {logs.map((l, idx) => (
+                    <Row key={l._id || idx}>
+                      <div>
+                        <div><Small>{new Date(l.timestamp).toLocaleString()} • {l.messageType} • {l.status}</Small></div>
+                        <div><strong>Usuário:</strong> <Small>{l.userName}</Small></div>
+                        <div><strong>Msg:</strong> <Small>{l.message}</Small></div>
+                        {l.response && <div><strong>Resp:</strong> <Small>{l.response}</Small></div>}
+                        {l.errorMessage && <div><strong>Erro:</strong> <Small>{l.errorMessage}</Small></div>}
+                      </div>
+                      <Small>{typeof l.processingTime === 'number' ? `${l.processingTime} ms` : '-'}</Small>
+                    </Row>
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            <Card>
+              <Toolbar>
+                <Title style={{ margin: 0 }}>Logs de Acesso</Title>
+                <Small>Últimos {accessLogs.length}</Small>
+              </Toolbar>
+              {loading ? <Small>Carregando...</Small> : (
+                <div style={{ maxHeight: 420, overflow: 'auto' }}>
+                  {accessLogs.map((l, idx) => (
+                    <Row key={l._id || idx}>
+                      <div>
+                        <div><Small>{l.col_data} {l.col_hora}</Small></div>
+                        <div><strong>IP:</strong> <Small>{l.col_IP}</Small></div>
+                        <div><strong>Bot:</strong> <Small>{l.col_nome_bot}</Small></div>
+                        <div><strong>Ação:</strong> <Small>{l.col_acao}</Small></div>
+                      </div>
+                    </Row>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
         )}
       </Main>
     </Container>

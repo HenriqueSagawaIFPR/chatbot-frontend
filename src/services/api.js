@@ -356,6 +356,37 @@ export const adminUpdateBotConfig = async (systemInstruction) => {
   }
 };
 
+// ===== ANALYTICS E LOGS (ADMIN) =====
+export const adminGetAnalytics = async () => {
+  try {
+    const { data } = await apiClient.get('/admin/analytics');
+    return data;
+  } catch (error) {
+    console.error('Erro ao obter analytics (admin):', error.response?.data || error.message);
+    throw error.response?.data || new Error('Erro ao obter analytics');
+  }
+};
+
+export const adminGetLogs = async (limit = 200) => {
+  try {
+    const { data } = await apiClient.get(`/admin/logs?limit=${encodeURIComponent(limit)}`);
+    return data;
+  } catch (error) {
+    console.error('Erro ao obter logs (admin):', error.response?.data || error.message);
+    throw error.response?.data || new Error('Erro ao obter logs');
+  }
+};
+
+export const adminGetAccessLogs = async (limit = 200) => {
+  try {
+    const { data } = await apiClient.get(`/admin/access-logs?limit=${encodeURIComponent(limit)}`);
+    return data;
+  } catch (error) {
+    console.error('Erro ao obter logs de acesso (admin):', error.response?.data || error.message);
+    throw error.response?.data || new Error('Erro ao obter logs de acesso');
+  }
+};
+
 /**
  * Busca informações do usuário (IP, etc.)
  * @returns {Promise<object>} - Informações do usuário
