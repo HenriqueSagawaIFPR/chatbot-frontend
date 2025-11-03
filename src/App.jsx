@@ -9,6 +9,7 @@ import ResponsiveLayout from './components/ResponsiveLayout';
 import LoginForm from './components/LoginForm';
 import UserProfile from './components/UserProfile';
 import AdminPanel from './components/AdminPanel';
+import UserBotConfig from './components/UserBotConfig';
 import { getChats, getChatById, sendMessage, deleteChat } from './services/api'; 
 import { GlobalStyles } from './styles/GlobalStyles';
 import ConfirmModal from './components/ConfirmModal';
@@ -58,6 +59,7 @@ const ChatApplication = () => {
   const [showProfile, setShowProfile] = useState(false);
   const [showLoginForm, setShowLoginForm] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showUserConfig, setShowUserConfig] = useState(false);
 
   console.log("Iniciando o ChatApplication...");
 
@@ -208,10 +210,38 @@ const ChatApplication = () => {
               onRequestRename={(chat) => { setChatToRename(chat); setIsRenameOpen(true); }}
               onShowProfile={handleShowProfile}
               onShowAdmin={handleShowAdmin}
+              onShowUserConfig={() => setShowUserConfig(true)}
             />
           }
         >
           <UserProfile />
+        </ResponsiveLayout>
+      </ThemeProvider>
+    );
+  }
+
+  // Painel de Persona do Usuário
+  if (showUserConfig) {
+    return (
+      <ThemeProvider theme={theme}>
+        <GlobalStyles />
+        <ResponsiveLayout
+          sidebar={
+            <Sidebar 
+              chats={chats} 
+              onSelectChat={handleSelectChat} 
+              onNewChat={handleNewChat} 
+              activeChatId={activeChat?._id} 
+              isLoading={isLoadingChats}
+              onRequestDelete={(chat) => { setChatToDelete(chat); setIsConfirmOpen(true); }}
+              onRequestRename={(chat) => { setChatToRename(chat); setIsRenameOpen(true); }}
+              onShowProfile={handleShowProfile}
+              onShowAdmin={handleShowAdmin}
+              onShowUserConfig={() => setShowUserConfig(true)}
+            />
+          }
+        >
+          <UserBotConfig onBack={() => setShowUserConfig(false)} />
         </ResponsiveLayout>
       </ThemeProvider>
     );
@@ -243,6 +273,7 @@ const ChatApplication = () => {
             onRequestRename={(chat) => { setChatToRename(chat); setIsRenameOpen(true); }}
             onShowProfile={handleShowProfile}
             onShowAdmin={handleShowAdmin}
+            onShowUserConfig={() => setShowUserConfig(true)}
           />
         }
       >
